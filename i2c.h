@@ -14,12 +14,9 @@ extern "C" {
     
 #include<xc.h>
     
-void setup_i2c(char master, char address);
-char process_interrupt_i2c();
+void setup_i2c(char master, char address, void (* on_byte_received)(char byte));
+void process_interrupt_i2c();
 void write_byte_i2c(char data);
-char bytes_received_i2c();
-char get_byte_i2c(char index);
-
 
 #ifdef	__cplusplus
 }

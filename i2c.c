@@ -1,10 +1,10 @@
 #include "i2c.h"
 
 char address_received_ = 0;
-char data_received_[10] = {0};
-char data_received_index_ = 0;
+void (* on_byte_received_)(char byte) = 0;
 
-void setup_i2c(char master, char address){
+void setup_i2c(char master, char address, void (* on_byte_received)(char byte)){
+    on_byte_received_ = on_byte_received;
     if(master){
         // 7 bit address
         /*
@@ -90,21 +90,14 @@ char is_receive_overflow(){
     return SSPOV;
 }
 
-char process_interrupt_i2c(){
+void process_interrupt_i2c(){
     SSPIF = 0;
     
-    /*if(!is_buffer_full()){
-        // no data yet, just return
-        return 0;
-    }*/
     char byte = SSPBUF;
     if(is_byte_address()){
         address_received_ = byte;
-        data_received_index_ = 0;
     } else{ 
         // we received data
-        data_received_[data_received_index_] = byte;
-        data_received_index_++;
+        on_byte_received_(byte);
     }
-    return 0;
 }
