@@ -15,9 +15,9 @@ extern "C" {
 #include<xc.h>
 #include "byte_macros.h"
     
-void set_duty(unsigned int duty);
+void set_duty_cycle(unsigned int duty);
 void set_duty_percent(unsigned char duty_p);
-void setup_pwm();
+void setup_pwm(void);
 
 
 #ifdef	__cplusplus

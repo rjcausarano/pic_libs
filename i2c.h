@@ -24,8 +24,7 @@ extern "C" {
 void setup_i2c(char master, char address, 
         void (* on_byte_write)(char offset, char byte),
         char (* on_byte_read)(char offset));
-void process_interrupt_i2c();
-void write_byte_i2c(char data);
+void process_interrupt_i2c(void);
 
 #ifdef	__cplusplus
 }

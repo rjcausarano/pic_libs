@@ -1,6 +1,15 @@
 #include "pwm.h"
 
-void set_duty(unsigned int duty){
+static void map_pins(){
+    // RA4 is PWM output
+    RA4PPS = 0b01100; // RA4 mapped to CCP1
+}
+
+static void pins_setup(){
+    TRISA4 = 0; // CCP1 as output
+}
+
+void set_duty_cycle(unsigned int duty){
     duty = duty << 6;
     unsigned char low_byte = LOWBYTE(duty);
     CCPR1L = HIGHBYTE(duty);
@@ -10,18 +19,20 @@ void set_duty(unsigned int duty){
 
 void set_duty_percent(unsigned char duty_p){
     unsigned int duty = duty_p * (__uint24) 1023 / 100;
-    set_duty(duty);
+    set_duty_cycle(duty);
 }
 
 void setup_pwm(){
     PR2 = 255; // set the frequency
-    set_duty(0);
+    set_duty_cycle(0);
     // TMR2 prescaler set to 1
     T2CKPS1 = 0;
     T2CKPS0 = 0;
     // Configure CCP1 for PWM
     CCP1M3 = 1;
     CCP1M2 = 1;
-    TRISC2 = 0; // CCP1 as output
+    pins_setup();
+    map_pins();
+    TMR2IF = 0;
     TMR2ON = 1; // turn on timer 2
 }
