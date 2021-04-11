@@ -1,10 +1,27 @@
 #include "i2c.h"
 
 char address_received_ = 0;
-void (* on_byte_received_)(char byte) = 0;
+void (* on_byte_write_)(char offset, char byte) = 0;
+char (* on_byte_read_)(char offset) = 0;
 
-void setup_i2c(char master, char address, void (* on_byte_received)(char byte)){
-    on_byte_received_ = on_byte_received;
+char bytes_received[2] = {0};
+char byte_index = 0;
+
+void map_pins_i2c(){
+    // set SCL
+    SSPCLKPPS = 0b10010;
+    RC2PPS = 0b10000;
+    // set SDA
+    SSPDATPPS = 0b10001;
+    RC1PPS = 0b10001;
+}
+
+void setup_i2c(char master, char address, 
+        void (* on_byte_write)(char offset, char byte),
+        char (* on_byte_read)(char offset)){
+    map_pins_i2c();
+    on_byte_write_ = on_byte_write;
+    on_byte_read_ = on_byte_read;
     if(master){
         // 7 bit address
         /*
@@ -15,9 +32,9 @@ void setup_i2c(char master, char address, void (* on_byte_received)(char byte)){
         SSPM0 = 0;
         */
     } else { // configured as slave
-        // RC3 and RC4 are inputs
-        TRISC3 = 1;
-        TRISC4 = 1;
+        // RC1 and RC2 are inputs
+        TRISC1 = 1;
+        TRISC2 = 1;
         // set the slave address
         SSPADD = address << 1;
         // 100 khz
@@ -64,12 +81,17 @@ char is_byte_data(){
 }
 
 char is_byte_address(){
-    return !is_byte_data();
+    return !I2C_DATA;
 }
 
-char is_read_instruction(){
+char is_read_instruction_i2c(){
     return I2C_READ;
 }
+
+char is_write_instruction_i2c(){
+    return !I2C_READ;
+}
+
 char stop_bit_detected(){
     return I2C_STOP;
 }
@@ -90,14 +112,30 @@ char is_receive_overflow(){
     return SSPOV;
 }
 
+void on_byte_received(char byte){
+    bytes_received[byte_index] = byte;
+    byte_index++;
+    if(byte_index >= 2){
+        byte_index = 0;
+        on_byte_write_(bytes_received[0], bytes_received[1]);
+    }
+}
+
 void process_interrupt_i2c(){
     SSPIF = 0;
     
     char byte = SSPBUF;
     if(is_byte_address()){
         address_received_ = byte;
-    } else{ 
-        // we received data
-        on_byte_received_(byte);
+        if(is_read_instruction_i2c()){
+            // we need to send data
+            byte_index = 0;
+            write_byte_i2c(on_byte_read_(bytes_received[0]));
+        }
+    } else{
+        if(is_write_instruction_i2c()){
+                    // we received data
+            on_byte_received(byte);
+        }
     }
 }
