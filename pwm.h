@@ -13,11 +13,13 @@ extern "C" {
 #endif
 
 #include<xc.h>
-#include "byte_macros.h"
     
-void set_duty_cycle(unsigned int duty);
-void set_duty_percent(unsigned char duty_p);
-void setup_pwm(void);
+void set_duty_cycle_pwm(unsigned int duty);
+void set_duty_percent_pwm(unsigned char duty_p);
+void set_prescaler_pwm(char prescaler);
+unsigned int get_period_us_pwm();
+void setup_pwm(char freq_Mhz);
+void period_interrupt_pwm(char enable);
 
 
 #ifdef	__cplusplus
