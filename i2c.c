@@ -2,7 +2,7 @@
 
 static char address_received_ = 0;
 static void (* on_byte_write_)(char offset, char byte) = 0;
-static char (* on_byte_read_)(char offset) = 0;
+static void (* on_byte_read_)(char offset) = 0;
 static char bytes_received[2] = {0};
 static char byte_index = 0;
 
@@ -23,7 +23,7 @@ static void pins_setup(){
 
 void setup_i2c(char master, char address, 
         void (* on_byte_write)(char offset, char byte),
-        char (* on_byte_read)(char offset)){
+        void (* on_byte_read)(char offset)){
     map_pins();
     on_byte_write_ = on_byte_write;
     on_byte_read_ = on_byte_read;
@@ -65,7 +65,7 @@ void setup_i2c(char master, char address,
     CKP = 1;
 }
 
-static void write_byte_i2c(char data){
+void write_byte_i2c(char data){
     SSPBUF = data;
     CKP = 1;
 }
@@ -123,7 +123,7 @@ void process_interrupt_i2c(){
         if(is_read_instruction()){
             // we need to send data
             byte_index = 0;
-            write_byte_i2c(on_byte_read_(bytes_received[0]));
+            on_byte_read_(bytes_received[0]);
         }
     } else{
         if(is_write_instruction()){
