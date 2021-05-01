@@ -127,7 +127,7 @@ void process_interrupt_i2c(){
         }
     } else{
         if(is_write_instruction()){
-                    // we received data
+            // we received data
             on_byte_received(byte);
         }
     }
