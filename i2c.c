@@ -3,7 +3,8 @@
 static char address_received_ = 0;
 static void (* on_byte_write_)(char offset, char byte) = 0;
 static char (* on_byte_read_)(char offset) = 0;
-static char bytes_received[2] = {0};
+// Can receive up to 3 bytes in a transaction. Increse this as needed.
+static char bytes_received[3] = {0};
 static char byte_index = 0;
 
 static void map_pins(){
@@ -107,11 +108,12 @@ char is_receive_overflow(){
 
 static void on_byte_received(char byte){
     bytes_received[byte_index] = byte;
-    byte_index++;
-    if(byte_index >= 2){
-        byte_index = 0;
-        on_byte_write_(bytes_received[0], bytes_received[1]);
+    // byte_index 0 is the offset
+    if(byte_index > 0){
+        on_byte_write_(bytes_received[0] + byte_index - 1, 
+                bytes_received[byte_index]);
     }
+    byte_index++;
 }
 
 void process_interrupt_i2c(){
@@ -122,9 +124,10 @@ void process_interrupt_i2c(){
         address_received_ = byte;
         if(is_read_instruction()){
             // we need to send data
-            byte_index = 0;
             write_byte_i2c(on_byte_read_(bytes_received[0]));
         }
+        // reset receive buffer after receiving address
+        byte_index = 0;
     } else{
         if(is_write_instruction()){
             // we received data
