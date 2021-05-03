@@ -1,7 +1,7 @@
 #include "pwm.h"
 #include "byte_macros.h"
 
-static unsigned int pwm_period_us_ = 0;
+static unsigned int pwm_period_us_ = 0, duty_ = 0;
 static char freq_Mhz_ = 0;
 
 static void map_pins(){
@@ -14,12 +14,18 @@ static void pins_setup(){
 }
 
 void set_duty_cycle_pwm(unsigned int duty){
+    duty_ = duty;
     duty = duty << 6;
     unsigned char low_byte = LOWBYTE(duty);
     CCPR1L = HIGHBYTE(duty);
     CCP1X = 0x01 & (low_byte >> 7);
     CCP1Y = 0x01 & (low_byte >> 6);
 }
+
+unsigned int get_duty_cycle_pwm(){
+    return duty_;
+}
+
 
 void set_duty_percent_pwm(unsigned char duty_p){
     unsigned int duty = duty_p * (__uint24) 1023 / 100;

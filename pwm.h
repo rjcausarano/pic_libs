@@ -15,6 +15,7 @@ extern "C" {
 #include<xc.h>
     
 void set_duty_cycle_pwm(unsigned int duty);
+unsigned int get_duty_cycle_pwm(void);
 void set_duty_percent_pwm(unsigned char duty_p);
 void set_prescaler_pwm(char prescaler);
 unsigned int get_period_us_pwm(void);
