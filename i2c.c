@@ -3,7 +3,7 @@
 static char address_received_ = 0;
 static void (* on_byte_write_)(char offset, char byte) = 0;
 static char (* on_byte_read_)(char offset) = 0;
-// Can receive up to 3 bytes in a transaction. Increse this as needed.
+// Can receive up to 3 bytes in a transaction. Increase this as needed.
 static char bytes_received[3] = {0};
 static char byte_index = 0;
 
@@ -82,29 +82,6 @@ static char is_read_instruction(){
 static char is_write_instruction(){
     return !I2C_READ;
 }
-
-/*
-char stop_bit_detected(){
-    return I2C_STOP;
-}
-
-char start_bit_detected(){
-    return I2C_START;
-}
-
-char is_buffer_full(){
-    return BF;
-}
-
-char is_colliding(){
-    return WCOL;
-}
-
-
-char is_receive_overflow(){
-    return SSPOV;
-}
-*/
 
 static void on_byte_received(char byte){
     bytes_received[byte_index] = byte;
