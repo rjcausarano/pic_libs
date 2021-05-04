@@ -78,7 +78,7 @@ void setup_pwm(char freq_Mhz){
     PR2 = 0xFF; // set the frequency
     set_duty_cycle_pwm(0);
     // TMR2 prescaler set to 64
-    set_prescaler_pwm(0b11);
+    set_prescaler_pwm(0b00);
     // Configure CCP1 for PWM
     CCP1M3 = 1;
     CCP1M2 = 1;
