@@ -3,9 +3,11 @@
 static char address_received_ = 0;
 static void (* on_byte_write_)(char offset, char byte) = 0;
 static char (* on_byte_read_)(char offset) = 0;
+static void (* on_begin_)(void) = 0;
+static void (* on_end_)(void) = 0;
 // Can receive up to 3 bytes in a transaction. Increase this as needed.
-static char bytes_received[3] = {0};
-static char byte_index = 0;
+static char bytes_received_[3] = {0};
+static char byte_index_ = 0, in_transaction_ = 0;
 
 static void map_pins(){
     // set SCL
@@ -66,6 +68,12 @@ void setup_i2c(char master, char address,
     CKP = 1;
 }
 
+void set_transaction_callbacks_i2c(void (* on_begin)(void), 
+        void (* on_end)(void)){
+    on_begin_ = on_begin;
+    on_end_ = on_end;
+}
+
 static void write_byte_i2c(char data){
     SSPBUF = data;
     CKP = 1;
@@ -83,14 +91,18 @@ static char is_write_instruction(){
     return !I2C_READ;
 }
 
+char stop_bit_detected(){
+    return I2C_STOP;
+}
+
 static void on_byte_received(char byte){
-    bytes_received[byte_index] = byte;
+    bytes_received_[byte_index_] = byte;
     // byte_index 0 is the offset
-    if(byte_index > 0){
-        on_byte_write_(bytes_received[0] + byte_index - 1, 
-                bytes_received[byte_index]);
+    if(byte_index_ > 0){
+        on_byte_write_(bytes_received_[0] + byte_index_ - 1, 
+                bytes_received_[byte_index_]);
     }
-    byte_index++;
+    byte_index_++;
 }
 
 void process_interrupt_i2c(){
@@ -98,20 +110,29 @@ void process_interrupt_i2c(){
     
     char byte = SSPBUF;
     if(is_byte_address()){
+        if(!in_transaction_ && on_begin_ != 0){
+            in_transaction_ = 1;
+            on_begin_();
+        }
         address_received_ = byte;
         if(is_read_instruction()){
             // we need to send data
-            write_byte_i2c(on_byte_read_(bytes_received[0]));
+            write_byte_i2c(on_byte_read_(bytes_received_[0]));
         }
         // reset receive buffer after receiving address
-        byte_index = 0;
+        byte_index_ = 0;
     } else{
         if(is_write_instruction()){
             // we received data
             on_byte_received(byte);
         } else{
-            bytes_received[0]++;
-            write_byte_i2c(on_byte_read_(bytes_received[0]));
+            bytes_received_[0]++;
+            write_byte_i2c(on_byte_read_(bytes_received_[0]));
         }
+    }
+    
+    if(stop_bit_detected() && on_end_ != 0){
+        in_transaction_ = 0;
+        on_end_();
     }
 }

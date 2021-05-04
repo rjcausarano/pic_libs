@@ -24,6 +24,8 @@ extern "C" {
 void setup_i2c(char master, char address, 
         void (* on_byte_write)(char offset, char byte),
         char (* on_byte_read)(char offset));
+void set_transaction_callbacks_i2c(void (* on_begin)(void), 
+        void (* on_end)(void));
 void process_interrupt_i2c(void);
 
 #ifdef	__cplusplus
