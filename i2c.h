@@ -18,13 +18,12 @@
 #define SSPIE SSP1IE
        
 static char address_received_ = 0;
-static void (* on_byte_write_)(char offset, char byte) = 0;
-static char (* on_byte_read_)(char offset) = 0;
-static void (* on_end_)(char data[]) = 0;
+static void (* on_write_data_)(char offset, char data[]) = 0;
+static char (* on_read_data_)(char offset, char data[]) = 0;
 // Can receive up to 5 bytes of data in a transaction. Increase this as needed.
 // index 0 is the offset address
-static char bytes_received_[5] = {0};
-static char byte_index_ = 0, in_transaction_ = 0;
+static char transmitted_bytes_[5] = {0};
+static char byte_index_ = 0, bytes_transmitted_ = 0;
 
 static void map_pins(){
     // set RC4 as SCL
@@ -48,13 +47,11 @@ void set_transaction_callbacks_i2c(void (* on_begin)(void),
         void (* on_end)(void));
 
 void setup_i2c(char master, char address, 
-        void (* on_byte_write)(char offset, char byte),
-        char (* on_byte_read)(char offset),
-        void (* on_end)(char data[])){
+        void (* on_write_data)(char offset, char data[]),
+        char (* on_read_data)(char offset, char data[])){
     map_pins();
-    on_byte_write_ = on_byte_write;
-    on_byte_read_ = on_byte_read;
-    on_end_ = on_end;
+    on_write_data_ = on_write_data;
+    on_read_data_ = on_read_data;
     if(master){
         // 7 bit address
         /*
@@ -115,12 +112,8 @@ char stop_bit_detected(){
 }
 
 static void on_byte_received(char byte){
-    bytes_received_[byte_index_] = byte;
-    // byte_index 0 is the offset
-    if(byte_index_ > 0){
-        on_byte_write_(bytes_received_[0] + byte_index_ - 1, 
-                bytes_received_[byte_index_]);
-    }
+    // byte_index 0 is the address offset
+    transmitted_bytes_[byte_index_] = byte;
     byte_index_++;
 }
 
@@ -129,13 +122,12 @@ void process_interrupt_i2c(){
     
     char byte = SSPBUF;
     if(is_byte_address()){
-        if(!in_transaction_){
-            in_transaction_ = 1;
-        }
         address_received_ = byte;
         if(is_read_instruction()){
-            // we need to send data
-            write_byte_i2c(on_byte_read_(bytes_received_[0]));
+            // we will send first byte of data
+            on_read_data_(transmitted_bytes_[0], transmitted_bytes_ + 1);
+            bytes_transmitted_ = 1;
+            write_byte_i2c(transmitted_bytes_[bytes_transmitted_]);
         }
         // reset receive buffer after receiving address
         byte_index_ = 0;
@@ -143,16 +135,14 @@ void process_interrupt_i2c(){
         if(is_write_instruction()){
             // we received data
             on_byte_received(byte);
-        } else{
+            if(stop_bit_detected()){
+                on_write_data_(transmitted_bytes_[0], transmitted_bytes_ + 1);
+            }
+        } else{ // It is a read instruction
             // increase offset by one
-            bytes_received_[0]++;
-            write_byte_i2c(on_byte_read_(bytes_received_[0]));
+            bytes_transmitted_++;
+            write_byte_i2c(transmitted_bytes_[bytes_transmitted_]);
         }
-    }
-    
-    if(stop_bit_detected()){
-        in_transaction_ = 0;
-        on_end_(bytes_received_ + 1);
     }
 }
 
