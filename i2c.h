@@ -17,12 +17,10 @@
 #define SSPIF SSP1IF
 #define SSPIE SSP1IE
        
-static char address_received_ = 0;
 static void (* on_byte_write_)(char offset, char byte) = 0;
 static char (* on_byte_read_)(char offset) = 0;
-// Can receive up to 3 bytes in a transaction. Increase this as needed.
-static char bytes_received_[3] = {0};
 static char byte_index_ = 0;
+static char selected_offset_ = 0;
 
 static void map_pins(){
     // set RC4 as SCL
@@ -108,11 +106,12 @@ char stop_bit_detected(){
 }
 
 static void on_byte_received(char byte){
-    bytes_received_[byte_index_] = byte;
     // byte_index 0 is the offset
-    if(byte_index_ > 0){
-        on_byte_write_(bytes_received_[0] + byte_index_ - 1, 
-                bytes_received_[byte_index_]);
+    if(byte_index_ == 0){
+        selected_offset_ = byte;
+    }
+    else {
+        on_byte_write_(selected_offset_ + byte_index_ - 1, byte);
     }
     byte_index_++;
 }
@@ -122,10 +121,9 @@ void process_interrupt_i2c(){
     
     char byte = SSPBUF;
     if(is_byte_address()){
-        address_received_ = byte;
         if(is_read_instruction()){
             // we need to send data
-            write_byte_i2c(on_byte_read_(bytes_received_[0]));
+            write_byte_i2c(on_byte_read_(selected_offset_));
         }
         // reset receive buffer after receiving address
         byte_index_ = 0;
@@ -135,8 +133,8 @@ void process_interrupt_i2c(){
             on_byte_received(byte);
         } else{
             // increase offset by one
-            bytes_received_[0]++;
-            write_byte_i2c(on_byte_read_(bytes_received_[0]));
+            selected_offset_++;
+            write_byte_i2c(on_byte_read_(selected_offset_));
         }
     }
 }
