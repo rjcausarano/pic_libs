@@ -20,9 +20,11 @@
 static char address_received_ = 0;
 static void (* on_byte_write_)(char offset, char byte) = 0;
 static char (* on_byte_read_)(char offset) = 0;
-// Can receive up to 3 bytes in a transaction. Increase this as needed.
-static char bytes_received_[3] = {0};
-static char byte_index_ = 0;
+static void (* on_end_)(char data[]) = 0;
+// Can receive up to 5 bytes of data in a transaction. Increase this as needed.
+// index 0 is the offset address
+static char bytes_received_[5] = {0};
+static char byte_index_ = 0, in_transaction_ = 0;
 
 static void map_pins(){
     // set RC4 as SCL
@@ -42,12 +44,17 @@ static void pins_setup(){
     TRISC3 = 1;
 }
 
+void set_transaction_callbacks_i2c(void (* on_begin)(void), 
+        void (* on_end)(void));
+
 void setup_i2c(char master, char address, 
         void (* on_byte_write)(char offset, char byte),
-        char (* on_byte_read)(char offset)){
+        char (* on_byte_read)(char offset),
+        void (* on_end)(char data[])){
     map_pins();
     on_byte_write_ = on_byte_write;
     on_byte_read_ = on_byte_read;
+    on_end_ = on_end;
     if(master){
         // 7 bit address
         /*
@@ -122,6 +129,9 @@ void process_interrupt_i2c(){
     
     char byte = SSPBUF;
     if(is_byte_address()){
+        if(!in_transaction_){
+            in_transaction_ = 1;
+        }
         address_received_ = byte;
         if(is_read_instruction()){
             // we need to send data
@@ -138,6 +148,11 @@ void process_interrupt_i2c(){
             bytes_received_[0]++;
             write_byte_i2c(on_byte_read_(bytes_received_[0]));
         }
+    }
+    
+    if(stop_bit_detected()){
+        in_transaction_ = 0;
+        on_end_(bytes_received_ + 1);
     }
 }
 
