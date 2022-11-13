@@ -17,13 +17,12 @@
 #define SSPIF SSP1IF
 #define SSPIE SSP1IE
        
-static char address_received_ = 0;
 static void (* on_write_data_)(char offset, char data[]) = 0;
-static char (* on_read_data_)(char offset, char data[]) = 0;
+static void (* on_read_data_)(char offset, char data[]) = 0;
 // Can receive up to 5 bytes of data in a transaction. Increase this as needed.
 // index 0 is the offset address
 static char transmitted_bytes_[5] = {0};
-static char byte_index_ = 0, bytes_transmitted_ = 0;
+static char received_bytes_index_ = 0, bytes_transmitted_ = 0;
 
 static void map_pins(){
     // set RC4 as SCL
@@ -48,7 +47,7 @@ void set_transaction_callbacks_i2c(void (* on_begin)(void),
 
 void setup_i2c(char master, char address, 
         void (* on_write_data)(char offset, char data[]),
-        char (* on_read_data)(char offset, char data[])){
+        void (* on_read_data)(char offset, char data[])){
     map_pins();
     on_write_data_ = on_write_data;
     on_read_data_ = on_read_data;
@@ -113,8 +112,8 @@ char stop_bit_detected(){
 
 static void on_byte_received(char byte){
     // byte_index 0 is the address offset
-    transmitted_bytes_[byte_index_] = byte;
-    byte_index_++;
+    transmitted_bytes_[received_bytes_index_] = byte;
+    received_bytes_index_++;
 }
 
 void process_interrupt_i2c(){
@@ -122,7 +121,6 @@ void process_interrupt_i2c(){
     
     char byte = SSPBUF;
     if(is_byte_address()){
-        address_received_ = byte;
         if(is_read_instruction()){
             // we will send first byte of data
             on_read_data_(transmitted_bytes_[0], transmitted_bytes_ + 1);
@@ -130,7 +128,7 @@ void process_interrupt_i2c(){
             write_byte_i2c(transmitted_bytes_[bytes_transmitted_]);
         }
         // reset receive buffer after receiving address
-        byte_index_ = 0;
+        received_bytes_index_ = 0;
     } else{
         if(is_write_instruction()){
             // we received data
@@ -139,7 +137,6 @@ void process_interrupt_i2c(){
                 on_write_data_(transmitted_bytes_[0], transmitted_bytes_ + 1);
             }
         } else{ // It is a read instruction
-            // increase offset by one
             bytes_transmitted_++;
             write_byte_i2c(transmitted_bytes_[bytes_transmitted_]);
         }
