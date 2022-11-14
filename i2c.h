@@ -133,7 +133,7 @@ void process_interrupt_i2c(){
         if(is_write_instruction()){
             // we received data
             on_byte_received(byte);
-            if(stop_bit_detected()){
+            if(stop_bit_detected() && received_bytes_index_ > 1){
                 on_write_data_(transmitted_bytes_[0], transmitted_bytes_ + 1);
             }
         } else{ // It is a read instruction
