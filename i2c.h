@@ -22,7 +22,7 @@ static void (* on_read_data_)(char offset, char data[]) = 0;
 // Can receive up to 5 bytes of data in a transaction. Increase this as needed.
 // index 0 is the offset address
 static char transmitted_bytes_[5] = {0};
-static char received_bytes_index_ = 0, bytes_transmitted_ = 0;
+static char bytes_buffer_index_ = 0;
 
 static void map_pins(){
     // set RC4 as SCL
@@ -112,8 +112,8 @@ char stop_bit_detected(){
 
 static void on_byte_received(char byte){
     // byte_index 0 is the address offset
-    transmitted_bytes_[received_bytes_index_] = byte;
-    received_bytes_index_++;
+    transmitted_bytes_[bytes_buffer_index_] = byte;
+    bytes_buffer_index_++;
 }
 
 void process_interrupt_i2c(){
@@ -121,24 +121,24 @@ void process_interrupt_i2c(){
     
     char byte = SSPBUF;
     if(is_byte_address()){
+        // reset receive buffer after receiving address
+        bytes_buffer_index_ = 0;
         if(is_read_instruction()){
             // we will send first byte of data
             on_read_data_(transmitted_bytes_[0], transmitted_bytes_ + 1);
-            bytes_transmitted_ = 1;
-            write_byte_i2c(transmitted_bytes_[bytes_transmitted_]);
+            bytes_buffer_index_++;
+            write_byte_i2c(transmitted_bytes_[bytes_buffer_index_]);
         }
-        // reset receive buffer after receiving address
-        received_bytes_index_ = 0;
     } else{
         if(is_write_instruction()){
             // we received data
             on_byte_received(byte);
-            if(stop_bit_detected() && received_bytes_index_ > 1){
+            if(stop_bit_detected() && bytes_buffer_index_ > 1){
                 on_write_data_(transmitted_bytes_[0], transmitted_bytes_ + 1);
             }
         } else{ // It is a read instruction
-            bytes_transmitted_++;
-            write_byte_i2c(transmitted_bytes_[bytes_transmitted_]);
+            bytes_buffer_index_++;
+            write_byte_i2c(transmitted_bytes_[bytes_buffer_index_]);
         }
     }
 }
