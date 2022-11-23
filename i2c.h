@@ -24,22 +24,23 @@ static void (* on_read_data_)(char offset, char data[]) = 0;
 static char transmitted_bytes_[5] = {0};
 static char bytes_buffer_index_ = 0;
 
-static void map_pins(){
-    // set RC4 as SCL
-    SSPCLKPPS = 0b10100;
-    RC4PPS = 0b10000;
-    // set RC3 as SDA
-    SSPDATPPS = 0b10011;
-    RC3PPS = 0b10001;
-}
+//static void map_pins(){
+//    // set RC4 as SCL
+//    SSPCLKPPS = 0b10100;
+//    RC4PPS = 0b10000;
+//    // set RC3 as SDA
+//    SSPDATPPS = 0b10011;
+//    RC3PPS = 0b10001;
+//}
 
 static void pins_setup(){
-    // RC3 and RC4 are digital pins
-    ANSC3 = 0;
-    ANSC4 = 0;
-    // RC3 and RC4 are inputs
-    TRISC4 = 1;
-    TRISC3 = 1;
+    // RB4 and RB6 are digital pins
+    char change_mask = 0b01010000;
+    ANSELB = (ANSELB & ~change_mask) | 0b00000000;
+    // RB4 is SDA
+    TRISB4 = 1;
+    // RB6 is SCL
+    TRISB6 = 1;
 }
 
 void set_transaction_callbacks_i2c(void (* on_begin)(void), 
@@ -48,7 +49,7 @@ void set_transaction_callbacks_i2c(void (* on_begin)(void),
 void setup_i2c(char master, char address, 
         void (* on_write_data)(char offset, char data[]),
         void (* on_read_data)(char offset, char data[])){
-    map_pins();
+//    map_pins();
     on_write_data_ = on_write_data;
     on_read_data_ = on_read_data;
     if(master){
@@ -67,10 +68,7 @@ void setup_i2c(char master, char address,
         // 100 khz
         SMP = 1;
         // 7 bit address, no start and stop bit interrupts
-        SSPM3 = 0;
-        SSPM2 = 1;
-        SSPM1 = 1;
-        SSPM0 = 0;
+        SSP1CON1bits.SSPM = 0b0110;
         // disable general call
         GCEN = 0;
         // clock stretching only on transmit
