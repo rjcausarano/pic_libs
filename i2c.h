@@ -41,6 +41,9 @@ static void pins_setup(){
     TRISB4 = 1;
     // RB6 is SCL
     TRISB6 = 1;
+    // Disable pull ups
+    WPUB4 = 0;
+    WPUB6 = 0;
 }
 
 void set_transaction_callbacks_i2c(void (* on_begin)(void), 
